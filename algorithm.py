@@ -1,9 +1,8 @@
 import time
 import math
 from collections import deque
-from typing import List, Tuple, Optional, Dict, Callable
 
-def _reconstruct(came_from: Dict, current: Tuple) -> List[Tuple]:
+def _reconstruct(came_from, current):
     path = [current]
     while current in came_from:
         current = came_from[current]
@@ -11,10 +10,10 @@ def _reconstruct(came_from: Dict, current: Tuple) -> List[Tuple]:
     path.reverse()
     return path
 
-def manhattan(a: Tuple[int, int], b: Tuple[int, int]) -> int:
+def manhattan(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
-def search(start: Tuple, goal: Tuple, get_neighbors: Callable, is_dfs: bool = False) -> Tuple[List[Tuple], int, float]:
+def search(start, goal, get_neighbors, is_dfs=False):
     t0 = time.perf_counter()
     container = deque([start]) if not is_dfs else [start]
     came_from, visited, nodes = {}, {start}, 0
@@ -32,8 +31,7 @@ def search(start: Tuple, goal: Tuple, get_neighbors: Callable, is_dfs: bool = Fa
     elapsed = (time.perf_counter() - t0) * 1000
     return [], nodes, elapsed
 
-def astar(start: Tuple, goal: Tuple, get_neighbors: Callable, 
-          enemy_pos: Optional[Tuple] = None) -> Tuple[List[Tuple], int, float]:
+def astar(start, goal, get_neighbors, enemy_pos=None):
     import heapq
     t0 = time.perf_counter()
     nodes = 0
@@ -64,11 +62,10 @@ def astar(start: Tuple, goal: Tuple, get_neighbors: Callable,
     return [], nodes, elapsed
 
 class AlphaBetaEnemy:
-    def __init__(self, depth: int = 5):
+    def __init__(self, depth=5):
         self.depth = depth
         self.nodes_explored = 0
-    def best_move(self, enemy_pos: Tuple, player_pos: Tuple, goal_pos: Tuple, 
-                  get_neighbors: Callable) -> Optional[Tuple]:
+    def best_move(self, enemy_pos, player_pos, goal_pos, get_neighbors):
         self.nodes_explored = 0
         best_val, best_next = -math.inf, None
         for nb in get_neighbors(*enemy_pos):
@@ -77,13 +74,12 @@ class AlphaBetaEnemy:
             if val > best_val:
                 best_val, best_next = val, nb
         return best_next
-    def _evaluate(self, enemy: Tuple, player: Tuple, goal: Tuple) -> float:
+    def _evaluate(self, enemy, player, goal):
         d_ep, d_pg = manhattan(enemy, player), manhattan(player, goal)
         if d_ep == 0: return 1000.0
         if player == goal: return -1000.0
         return -2.0 * d_ep + 1.0 * d_pg
-    def _minimax(self, enemy: Tuple, player: Tuple, goal: Tuple, depth: int, is_max: bool, 
-                 alpha: float, beta: float, get_neighbors: Callable) -> float:
+    def _minimax(self, enemy, player, goal, depth, is_max, alpha, beta, get_neighbors):
         self.nodes_explored += 1
         if depth == 0 or enemy == player or player == goal:
             return self._evaluate(enemy, player, goal)
@@ -104,8 +100,7 @@ class AlphaBetaEnemy:
 
 ALGORITHM_NAMES = ["BFS", "DFS", "A* (Manhattan)", "A* Smart (Avoid Enemy)"]
 
-def run_algorithm(name: str, start: Tuple, goal: Tuple, get_neighbors: Callable,
-                  enemy_pos: Optional[Tuple] = None) -> Tuple[List[Tuple], int, float]:
+def run_algorithm(name, start, goal, get_neighbors, enemy_pos=None):
     if name == "BFS":
         return search(start, goal, get_neighbors, is_dfs=False)
     if name == "DFS":

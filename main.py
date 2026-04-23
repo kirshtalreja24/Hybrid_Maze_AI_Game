@@ -11,13 +11,13 @@ WIN_W, WIN_H = 1100, 720
 FPS = 60
 AUTO_DELAY = 0.18
 
-def make_enemy_start(maze: Maze) -> tuple:
+def make_enemy_start(maze):
     walkable = [(r, c) for r in range(maze.rows) for c in range(maze.cols) 
                 if (r, c) != (0, 0) and (r, c) != maze.goal]
     far_enough = [p for p in walkable if (p[0] + p[1]) > 5]
     return random.choice(far_enough) if far_enough else random.choice(walkable or [(maze.rows-1, 0)])
 
-def init_game(maze: Maze, ui: UIPanel) -> GameState:
+def init_game(maze, ui):
     mode = "ai" if ui.selected_mode == "AI Player" else "human"
     algo = ui.selected_algo
     state = GameState((0, 0), make_enemy_start(maze), maze.goal, mode=mode)

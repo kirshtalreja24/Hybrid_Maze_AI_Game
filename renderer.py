@@ -1,5 +1,4 @@
 import pygame
-from typing import List, Tuple, Optional
 from maze import Maze
 from game_state import GameState
 
@@ -14,7 +13,7 @@ C_BTN_TEXT, C_BTN_BORDER = (230, 235, 255), (65, 75, 110)
 PANEL_W, MIN_CELL_PX, MAX_CELL_PX, AGENT_RADIUS = 260, 12, 48, 0.38
 
 class Button:
-    def __init__(self, rect: pygame.Rect, label: str, tag: str = ""):
+    def __init__(self, rect, label, tag=""):
         self.rect, self.label, self.tag, self.hovered, self.active = rect, label, tag, False, False
     def draw(self, surf, font):
         col = C_BTN_ACTIVE if self.active else (C_BTN_HOVER if self.hovered else C_BTN)
@@ -27,7 +26,7 @@ class Button:
     def clicked(self, pos): return self.rect.collidepoint(pos)
 
 class Dropdown:
-    def __init__(self, rect: pygame.Rect, options: List[str], selected: int = 0):
+    def __init__(self, rect, options, selected=0):
         self.rect, self.options, self.selected, self.open, self.item_h = rect, options, selected, False, rect.height
     def draw(self, surf, font, mouse_pos):
         col = C_BTN_HOVER if self.rect.collidepoint(mouse_pos) else C_BTN
@@ -47,7 +46,7 @@ class Dropdown:
             pygame.draw.rect(surf, C_BTN_BORDER, r, 1)
             t = font.render(opt, True, C_TEXT)
             surf.blit(t, (r.x + 10, r.y + 7))
-    def handle_click(self, pos) -> bool:
+    def handle_click(self, pos):
         if self.rect.collidepoint(pos): self.open = not self.open; return False
         if self.open:
             for i in range(len(self.options)):
@@ -57,7 +56,7 @@ class Dropdown:
         return False
 
 class Slider:
-    def __init__(self, rect: pygame.Rect, min_val, max_val, value):
+    def __init__(self, rect, min_val, max_val, value):
         self.rect, self.min_val, self.max_val, self.value, self.dragging = rect, min_val, max_val, value, False
     def draw(self, surf, font):
         pygame.draw.rect(surf, C_BTN, self.rect, border_radius=10)
@@ -69,7 +68,7 @@ class Slider:
         pygame.draw.circle(surf, C_ACCENT, (kx, self.rect.centery), 4)
         lbl = font.render(str(self.value), True, C_TEXT)
         surf.blit(lbl, (self.rect.right + 12, self.rect.y - 4))
-    def handle_event(self, event) -> bool:
+    def handle_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             t = (self.value - self.min_val) / (self.max_val - self.min_val)
             if abs(event.pos[0] - int(self.rect.x + t * self.rect.width)) < 15: self.dragging = True
@@ -80,7 +79,7 @@ class Slider:
         return False
 
 class Renderer:
-    def __init__(self, screen: pygame.Surface):
+    def __init__(self, screen):
         self.screen = screen
         self.W, self.H = screen.get_size()
         pygame.font.init()
@@ -88,15 +87,15 @@ class Renderer:
         self.font_sm = pygame.font.SysFont("Segoe UI", 12)
         self.font_xs = pygame.font.SysFont("Segoe UI", 11)
         self.maze_surf, self.cell_px, self.maze_origin = None, 24, (PANEL_W + 10, 10)
-    def compute_cell_size(self, maze: Maze):
+    def compute_cell_size(self, maze):
         avail_w, avail_h = self.W - PANEL_W - 20, self.H - 20
         ir, ic = maze.internal_size()
         self.cell_px = max(MIN_CELL_PX, min(MAX_CELL_PX, min(avail_w // ic, avail_h // ir)))
         self.maze_origin = (PANEL_W + (avail_w - ic * self.cell_px) // 2 + 10, (avail_h - ir * self.cell_px) // 2 + 10)
-    def logical_to_screen(self, r, c, maze: Maze):
+    def logical_to_screen(self, r, c, maze):
         ir, ic = maze.cell_to_internal(r, c)
         return self.maze_origin[0] + ic * self.cell_px + self.cell_px // 2, self.maze_origin[1] + ir * self.cell_px + self.cell_px // 2
-    def build_maze_surface(self, maze: Maze):
+    def build_maze_surface(self, maze):
         ir, ic = maze.internal_size()
         surf = pygame.Surface((ic * self.cell_px, ir * self.cell_px))
         for r in range(ir):

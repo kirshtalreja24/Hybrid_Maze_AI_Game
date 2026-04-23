@@ -1,19 +1,16 @@
-from typing import Tuple, List, Optional
-from dataclasses import dataclass
-
-@dataclass
 class Metrics:
-    nodes_explored: int = 0
-    path_length: int = 0
-    exec_time_ms: float = 0.0
-    algorithm: str = ""
+    def __init__(self, nodes_explored=0, path_length=0, exec_time_ms=0.0, algorithm=""):
+        self.nodes_explored = nodes_explored
+        self.path_length = path_length
+        self.exec_time_ms = exec_time_ms
+        self.algorithm = algorithm
 
 class GameState:
     STATUS_PLAYING = "playing"
     STATUS_WIN     = "win"
     STATUS_LOSE    = "lose"
 
-    def __init__(self, player_start: Tuple, enemy_start: Tuple, goal: Tuple, mode: str = "ai"):
+    def __init__(self, player_start, enemy_start, goal, mode="ai"):
         self.player_pos = player_start
         self.enemy_pos  = enemy_start
         self.goal       = goal
@@ -29,10 +26,10 @@ class GameState:
         self.prev_enemy_pos  = enemy_start
         self.move_timer      = 0.0
 
-    def is_over(self) -> bool:
+    def is_over(self):
         return self.status != self.STATUS_PLAYING
 
-    def move_agent(self, agent: str, new_pos: Tuple):
+    def move_agent(self, agent, new_pos):
         if self.is_over(): return
         if agent == "player":
             self.prev_player_pos = self.player_pos
@@ -48,7 +45,7 @@ class GameState:
         elif self.player_pos == self.enemy_pos:
             self.status = self.STATUS_LOSE
 
-    def human_step(self, new_pos: Tuple, maze, enemy_ai):
+    def human_step(self, new_pos, maze, enemy_ai):
         if self.is_over(): return
         self.move_agent("player", new_pos)
         if not self.is_over():
@@ -57,7 +54,7 @@ class GameState:
                 self.move_agent("enemy", next_pos)
             self.enemy_metrics.nodes_explored = enemy_ai.nodes_explored
 
-    def step(self, maze, algo_name: str, enemy_ai):
+    def step(self, maze, algo_name, enemy_ai):
         if self.is_over(): return
         if self.mode == "ai":
             if "Smart" in algo_name:
@@ -78,7 +75,7 @@ class GameState:
             self.move_agent("enemy", next_pos)
         self.enemy_metrics.nodes_explored = enemy_ai.nodes_explored
 
-    def set_player_path(self, path: List[Tuple], nodes: int, ms: float, algo: str):
+    def set_player_path(self, path, nodes, ms, algo):
         self.player_path = path
         self.player_step = 0
         self.player_metrics.nodes_explored = nodes

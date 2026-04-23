@@ -1,0 +1,23 @@
+Hybrid Maze AI - Project Overview
+
+1. Project Structure:
+   - main.py: Entry point. Manages the Pygame event loop, UI buttons, and top-level game orchestration.
+   - algorithm.py: Core AI logic. Implements Search (BFS/DFS), A* (with optional avoidance penalty), and Minimax with Alpha-Beta Pruning.
+   - game_state.py: Manages the turn-based state. Tracks positions, metrics, and handles the logic for advancing turns (Player -> Enemy).
+   - maze.py: Generates a 2D grid-based maze using a randomized depth-first search algorithm.
+   - renderer.py: Handles all Pygame drawing, including the maze, agents, smooth movement interpolation, and the custom UI system (buttons, sliders, dropdowns).
+
+2. Core Logic:
+   - Turn-Based System: In each turn, the player moves (either manually or following an AI path), and the enemy responds using Alpha-Beta pruning to intercept the player.
+   - AI Player: Can use BFS, DFS, or A* to find the path to the goal. The "A* Smart" mode adds a proximity penalty to avoid getting too close to the enemy.
+   - Enemy AI: Uses a 4-5 move lookahead (Minimax) to calculate the best move to catch the player or block them from the goal.
+   - Visuals: Features smooth movement interpolation, trails for both agents, and a modern, high-contrast UI design.
+
+3. Controls:
+   - Start / Restart: Initializes the game with the selected settings.
+   - Step (Space): Advances the game by one move.
+   - Auto-Run: Animates the AI's progress automatically.
+   - New Maze: Regenerates the maze with a new random seed.
+   - Human Mode: Use Arrow keys or WASD to move the player manually.
+   - 'R' key: Quick restart.
+   - 'ESC': Quit.

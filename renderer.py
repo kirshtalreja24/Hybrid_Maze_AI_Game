@@ -1,13 +1,8 @@
-"""
-renderer.py — Pygame rendering engine for the Hybrid Maze Game.
-"""
-
 import pygame
 from typing import List, Tuple, Optional
 from maze import Maze
 from game_state import GameState
 
-# ── Palette ───────────────────────────────────────────────────────────
 C_BG, C_WALL, C_PATH = (15, 17, 26), (32, 36, 52), (22, 25, 38)
 C_PANEL, C_PANEL_BORDER = (20, 24, 36), (50, 60, 90)
 C_PLAYER, C_ENEMY, C_GOAL, C_START = (80, 220, 150), (240, 90, 110), (80, 180, 240), (140, 120, 255)
@@ -16,13 +11,11 @@ C_TEXT, C_TEXT_DIM, C_ACCENT = (220, 225, 245), (130, 135, 160), (80, 180, 240)
 C_WIN, C_LOSE = (80, 220, 150), (240, 90, 110)
 C_BTN, C_BTN_HOVER, C_BTN_ACTIVE = (40, 46, 68), (55, 62, 90), (80, 180, 240)
 C_BTN_TEXT, C_BTN_BORDER = (230, 235, 255), (65, 75, 110)
-
 PANEL_W, MIN_CELL_PX, MAX_CELL_PX, AGENT_RADIUS = 260, 12, 48, 0.38
 
 class Button:
     def __init__(self, rect: pygame.Rect, label: str, tag: str = ""):
         self.rect, self.label, self.tag, self.hovered, self.active = rect, label, tag, False, False
-
     def draw(self, surf, font):
         col = C_BTN_ACTIVE if self.active else (C_BTN_HOVER if self.hovered else C_BTN)
         pygame.draw.rect(surf, col, self.rect, border_radius=8)
@@ -30,14 +23,12 @@ class Button:
         pygame.draw.rect(surf, b_col, self.rect, 1, border_radius=8)
         txt = font.render(self.label, True, C_BTN_TEXT)
         surf.blit(txt, txt.get_rect(center=self.rect.center))
-
     def check_hover(self, pos): self.hovered = self.rect.collidepoint(pos)
     def clicked(self, pos): return self.rect.collidepoint(pos)
 
 class Dropdown:
     def __init__(self, rect: pygame.Rect, options: List[str], selected: int = 0):
         self.rect, self.options, self.selected, self.open, self.item_h = rect, options, selected, False, rect.height
-
     def draw(self, surf, font, mouse_pos):
         col = C_BTN_HOVER if self.rect.collidepoint(mouse_pos) else C_BTN
         pygame.draw.rect(surf, col, self.rect, border_radius=6)
@@ -47,7 +38,6 @@ class Dropdown:
         pygame.draw.polygon(surf, C_TEXT, [(self.rect.right - 18, self.rect.centery + (3 if self.open else -3)), 
                                            (self.rect.right - 10, self.rect.centery + (3 if self.open else -3)), 
                                            (self.rect.right - 14, self.rect.centery + (-3 if self.open else 3))])
-
     def draw_list(self, surf, font, mouse_pos):
         if not self.open: return
         for i, opt in enumerate(self.options):
@@ -57,7 +47,6 @@ class Dropdown:
             pygame.draw.rect(surf, C_BTN_BORDER, r, 1)
             t = font.render(opt, True, C_TEXT)
             surf.blit(t, (r.x + 10, r.y + 7))
-
     def handle_click(self, pos) -> bool:
         if self.rect.collidepoint(pos): self.open = not self.open; return False
         if self.open:
@@ -70,7 +59,6 @@ class Dropdown:
 class Slider:
     def __init__(self, rect: pygame.Rect, min_val, max_val, value):
         self.rect, self.min_val, self.max_val, self.value, self.dragging = rect, min_val, max_val, value, False
-
     def draw(self, surf, font):
         pygame.draw.rect(surf, C_BTN, self.rect, border_radius=10)
         t = (self.value - self.min_val) / (self.max_val - self.min_val)
@@ -81,7 +69,6 @@ class Slider:
         pygame.draw.circle(surf, C_ACCENT, (kx, self.rect.centery), 4)
         lbl = font.render(str(self.value), True, C_TEXT)
         surf.blit(lbl, (self.rect.right + 12, self.rect.y - 4))
-
     def handle_event(self, event) -> bool:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             t = (self.value - self.min_val) / (self.max_val - self.min_val)
@@ -101,17 +88,14 @@ class Renderer:
         self.font_sm = pygame.font.SysFont("Segoe UI", 12)
         self.font_xs = pygame.font.SysFont("Segoe UI", 11)
         self.maze_surf, self.cell_px, self.maze_origin = None, 24, (PANEL_W + 10, 10)
-
     def compute_cell_size(self, maze: Maze):
         avail_w, avail_h = self.W - PANEL_W - 20, self.H - 20
         ir, ic = maze.internal_size()
         self.cell_px = max(MIN_CELL_PX, min(MAX_CELL_PX, min(avail_w // ic, avail_h // ir)))
         self.maze_origin = (PANEL_W + (avail_w - ic * self.cell_px) // 2 + 10, (avail_h - ir * self.cell_px) // 2 + 10)
-
     def logical_to_screen(self, r, c, maze: Maze):
         ir, ic = maze.cell_to_internal(r, c)
         return self.maze_origin[0] + ic * self.cell_px + self.cell_px // 2, self.maze_origin[1] + ir * self.cell_px + self.cell_px // 2
-
     def build_maze_surface(self, maze: Maze):
         ir, ic = maze.internal_size()
         surf = pygame.Surface((ic * self.cell_px, ir * self.cell_px))
@@ -119,32 +103,25 @@ class Renderer:
             for c in range(ic):
                 pygame.draw.rect(surf, C_WALL if maze.is_wall(r, c) else C_PATH, (c * self.cell_px, r * self.cell_px, self.cell_px, self.cell_px))
         self.maze_surf = surf
-
     def draw(self, maze, state, player_path, ui):
         self.screen.fill(C_BG)
         if self.maze_surf: self.screen.blit(self.maze_surf, self.maze_origin)
-        
         overlay = pygame.Surface((self.W, self.H), pygame.SRCALPHA)
         if player_path and len(player_path) > 1:
             pts = [self.logical_to_screen(r, c, maze) for r, c in player_path]
             pygame.draw.lines(overlay, C_PATH_HIGHLIGHT, False, pts, max(2, self.cell_px // 4))
-        
         for trail, col in [(state.player_trail, C_PLAYER), (state.enemy_trail, C_ENEMY)]:
             if len(trail) > 1:
                 pts = [self.logical_to_screen(r, c, maze) for r, c in trail]
                 pygame.draw.lines(overlay, (*col, 50), False, pts, max(2, self.cell_px // 10))
         self.screen.blit(overlay, (0, 0))
-
-        # Goal & Start
         gx, gy = self.logical_to_screen(*state.goal, maze)
         pygame.draw.polygon(self.screen, C_GOAL, [(gx, gy - 10), (gx + 10, gy), (gx, gy + 10), (gx - 10, gy)])
         sx, sy = self.logical_to_screen(0, 0, maze)
         r = int(self.cell_px * AGENT_RADIUS)
         pygame.draw.rect(self.screen, C_START, (sx - r, sy - r, 2 * r, 2 * r), border_radius=3)
-
-        # Agents (interpolated)
         t = min(1.0, state.move_timer / 0.25)
-        t = 1 - (1 - t) ** 2 # Ease-out
+        t = 1 - (1 - t) ** 2
         for pos, prev, col, label in [(state.player_pos, state.prev_player_pos, C_PLAYER, "P"), 
                                       (state.enemy_pos, state.prev_enemy_pos, C_ENEMY, "E")]:
             p1, p2 = self.logical_to_screen(*prev, maze), self.logical_to_screen(*pos, maze)
@@ -153,10 +130,8 @@ class Renderer:
             pygame.draw.circle(self.screen, (255, 255, 255), (int(x), int(y)), r, 2)
             txt = self.font_xs.render(label, True, (0, 0, 0))
             self.screen.blit(txt, txt.get_rect(center=(int(x), int(y))))
-
         ui.draw(self.screen)
         if state.is_over(): self._draw_overlay(state)
-
     def _draw_overlay(self, state):
         s = pygame.Surface((self.W, self.H), pygame.SRCALPHA)
         s.fill((5, 5, 10, 200))
@@ -175,7 +150,6 @@ class Renderer:
 class UIPanel:
     ALGO_OPTIONS = ["BFS", "DFS", "A* (Manhattan)", "A* Smart (Avoid Enemy)"]
     MODE_OPTIONS = ["AI Player", "Human Player"]
-
     def __init__(self, h):
         self.H, self.font_title = h, pygame.font.SysFont("Segoe UI", 16, bold=True)
         self.font_lbl = pygame.font.SysFont("Segoe UI", 13)
@@ -186,14 +160,12 @@ class UIPanel:
         self.size_slider = Slider(pygame.Rect(x, 220, W - 30, 14), 5, 25, 10)
         self.buttons = [Button(pygame.Rect(x, 260 + i*40, W, 32), label, tag) for i, (label, tag) in enumerate([("Start / Restart", "start"), ("Step (Space)", "step"), ("New Maze", "regen"), ("Auto-Run", "auto")])]
         self.btn_auto = self.buttons[3]
-
     @property
     def selected_algo(self): return self.ALGO_OPTIONS[self.algo_dd.selected]
     @property
     def selected_mode(self): return self.MODE_OPTIONS[self.mode_dd.selected]
     @property
     def maze_size(self): return self.size_slider.value
-
     def draw(self, surf):
         pygame.draw.rect(surf, C_PANEL, (0, 0, PANEL_W, self.H))
         pygame.draw.rect(surf, C_PANEL_BORDER, (0, 0, PANEL_W, self.H), 1)
@@ -205,7 +177,6 @@ class UIPanel:
         for b in self.buttons: b.check_hover(mouse); b.draw(surf, self.font_lbl)
         self.algo_dd.draw_list(surf, self.font_lbl, mouse)
         self.mode_dd.draw_list(surf, self.font_lbl, mouse)
-
     def draw_metrics(self, surf, p_algo, p_nodes, p_len, p_ms, e_nodes):
         y = 430
         for label, val, col in [("Algorithm", p_algo, C_TEXT), ("Nodes Explored", str(p_nodes), C_TEXT), ("Path Length", str(p_len), C_TEXT), ("Time (ms)", f"{p_ms:.2f}", C_TEXT)]:
@@ -215,7 +186,6 @@ class UIPanel:
         surf.blit(self.font_lbl.render("Enemy Explored:", True, C_ENEMY), (14, y+10))
         v = self.font_val.render(str(e_nodes), True, C_ENEMY)
         surf.blit(v, (PANEL_W - 14 - v.get_width(), y+10))
-
     def handle_event(self, event):
         triggered = []
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:

@@ -3,9 +3,7 @@ game_state.py — Tracks game state, turn management, metrics, and win/loss logi
 """
 
 from typing import Tuple, List, Optional
-from dataclasses import dataclass, field
-import time
-
+from dataclasses import dataclass
 
 @dataclass
 class Metrics:
@@ -14,110 +12,100 @@ class Metrics:
     exec_time_ms: float = 0.0
     algorithm: str = ""
 
-    def reset(self):
-        self.nodes_explored = 0
-        self.path_length = 0
-        self.exec_time_ms = 0.0
-
-
 class GameState:
     """
-    Turn-based game: Player moves first, then Enemy responds.
-
-    Modes:
-        'human'  — keyboard-controlled player
-        'ai'     — player auto-follows chosen algorithm path
+    Turn-based game state manager.
+    Modes: 'human' | 'ai'
     """
+    STATUS_PLAYING = "playing"
+    STATUS_WIN     = "win"
+    STATUS_LOSE    = "lose"
 
-    STATUS_PLAYING  = "playing"
-    STATUS_WIN      = "win"
-    STATUS_LOSE     = "lose"
+    def __init__(self, player_start: Tuple, enemy_start: Tuple, goal: Tuple, mode: str = "ai"):
+        self.player_pos = player_start
+        self.enemy_pos  = enemy_start
+        self.goal       = goal
+        self.mode       = mode
+        self.status     = self.STATUS_PLAYING
 
-    def __init__(self,
-                 player_start: Tuple[int, int],
-                 enemy_start: Tuple[int, int],
-                 goal: Tuple[int, int],
-                 mode: str = "ai"):
-        self.player_pos   = player_start
-        self.enemy_pos    = enemy_start
-        self.goal         = goal
-        self.mode         = mode          # 'human' | 'ai'
-        self.status       = self.STATUS_PLAYING
-
-        # Path followed by AI-controlled player
-        self.player_path: List[Tuple[int, int]] = []
-        self.player_step  = 0             # index into player_path
-
-        # Metrics
+        self.player_path = []
+        self.player_step = 0
         self.player_metrics = Metrics()
         self.enemy_metrics  = Metrics()
 
-        # History for trail visualisation
-        self.player_trail: List[Tuple[int, int]] = [player_start]
-        self.enemy_trail:  List[Tuple[int, int]] = [enemy_start]
+        self.player_trail = [player_start]
+        self.enemy_trail  = [enemy_start]
 
-        # For interpolation
         self.prev_player_pos = player_start
         self.prev_enemy_pos  = enemy_start
-        self.move_timer      = 0.0  # time since last move
+        self.move_timer      = 0.0
 
-        # Turn tracking
-        self.turn: int = 0               # 0 = player's turn, 1 = enemy's turn
-        self.moves: int = 0
+    def is_over(self) -> bool:
+        return self.status != self.STATUS_PLAYING
 
-    # ── State checks ──────────────────────────────────────────────────
+    def move_agent(self, agent: str, new_pos: Tuple):
+        """Generic movement for both player and enemy."""
+        if self.is_over(): return
 
-    def check_status(self):
+        if agent == "player":
+            self.prev_player_pos = self.player_pos
+            self.player_pos = new_pos
+            self.player_trail.append(new_pos)
+        else:
+            self.prev_enemy_pos = self.enemy_pos
+            self.enemy_pos = new_pos
+            self.enemy_trail.append(new_pos)
+
+        self.move_timer = 0.0
+        
+        # Check Win/Loss
         if self.player_pos == self.goal:
             self.status = self.STATUS_WIN
         elif self.player_pos == self.enemy_pos:
             self.status = self.STATUS_LOSE
 
-    def is_over(self) -> bool:
-        return self.status != self.STATUS_PLAYING
+    def human_step(self, new_pos: Tuple, maze, enemy_ai):
+        """Handle manual player move and immediate enemy response."""
+        if self.is_over(): return
+        self.move_agent("player", new_pos)
+        if not self.is_over():
+            next_pos = enemy_ai.best_move(self.enemy_pos, self.player_pos, self.goal, maze.get_neighbors)
+            if next_pos:
+                self.move_agent("enemy", next_pos)
+            self.enemy_metrics.nodes_explored = enemy_ai.nodes_explored
 
-    # ── Player movement ───────────────────────────────────────────────
+    def step(self, maze, algo_name: str, enemy_ai):
+        """Advance one turn: player moves, then enemy responds."""
+        if self.is_over(): return
 
-    def move_player(self, new_pos: Tuple[int, int]):
-        self.prev_player_pos = self.player_pos
-        self.player_pos = new_pos
-        self.player_trail.append(new_pos)
-        self.moves += 1
-        self.check_status()
-        self.turn = 1   # now enemy's turn
-        self.move_timer = 0.0
+        # 1. Player Turn
+        if self.mode == "ai":
+            if "Smart" in algo_name:
+                from algorithm import run_algorithm
+                path, nodes, ms = run_algorithm(algo_name, self.player_pos, self.goal, 
+                                                maze.get_neighbors, self.enemy_pos)
+                if len(path) > 1:
+                    self.move_agent("player", path[1])
+                    self.player_metrics.nodes_explored = nodes
+                    self.player_metrics.path_length = len(path)
+                    self.player_metrics.exec_time_ms = ms
+            else:
+                if self.player_step + 1 < len(self.player_path):
+                    self.player_step += 1
+                    self.move_agent("player", self.player_path[self.player_step])
+        
+        if self.is_over(): return
 
-    def advance_player_ai(self) -> bool:
-        """Advance player one step along pre-computed path. Returns True if moved."""
-        if self.is_over():
-            return False
-        if self.player_step + 1 < len(self.player_path):
-            self.player_step += 1
-            self.move_player(self.player_path[self.player_step])
-            return True
-        return False
-
-    # ── Enemy movement ────────────────────────────────────────────────
-
-    def move_enemy(self, new_pos: Tuple[int, int]):
-        if self.is_over():
-            return
-        self.prev_enemy_pos = self.enemy_pos
-        self.enemy_pos = new_pos
-        self.enemy_trail.append(new_pos)
-        self.check_status()
-        self.turn = 0   # back to player's turn
-        self.move_timer = 0.0
-
-    # ── Utility ───────────────────────────────────────────────────────
+        # 2. Enemy Turn
+        next_pos = enemy_ai.best_move(self.enemy_pos, self.player_pos, self.goal, maze.get_neighbors)
+        if next_pos:
+            self.move_agent("enemy", next_pos)
+        self.enemy_metrics.nodes_explored = enemy_ai.nodes_explored
 
     def set_player_path(self, path: List[Tuple], nodes: int, ms: float, algo: str):
-        self.player_path  = path
-        self.player_step  = 0
+        self.player_path = path
+        self.player_step = 0
         self.player_metrics.nodes_explored = nodes
         self.player_metrics.path_length    = len(path)
         self.player_metrics.exec_time_ms   = ms
         self.player_metrics.algorithm      = algo
-
-    def set_enemy_metrics(self, nodes: int):
-        self.enemy_metrics.nodes_explored = nodes
